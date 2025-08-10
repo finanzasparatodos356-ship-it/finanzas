@@ -21,7 +21,7 @@ export async function POST(request: Request) {
 
     const to = getRecipients();
     const from = process.env.EMAIL_FROM || "Taller EF <onboarding@resend.dev>";
-    const replyTo = process.env.REPLY_TO;
+    const replyToEnv = process.env.REPLY_TO;
 
     const timestamp = new Date().toLocaleString("es-ES", { timeZone: "Europe/Madrid" });
 
@@ -55,14 +55,19 @@ export async function POST(request: Request) {
     }
 
     const resend = new Resend(apiKey);
-    const { error: resendError } = await resend.emails.send({
+
+    const sendOptions: Parameters<typeof resend.emails.send>[0] = {
       from,
       to,
       subject,
       text,
       html,
-      replyTo,
-    });
+    };
+    if (replyToEnv && replyToEnv.trim().length > 0) {
+      sendOptions.replyTo = replyToEnv.trim();
+    }
+
+    const { error: resendError } = await resend.emails.send(sendOptions);
 
     if (resendError) {
       console.error("Resend error:", resendError);
