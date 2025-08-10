@@ -1,8 +1,6 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 function getRecipients(): string[] {
   const envList = process.env.EMAIL_TO?.split(",").map((s) => s.trim()).filter(Boolean) ?? [];
   if (envList.length > 0) return envList;
@@ -31,30 +29,32 @@ export async function POST(request: Request) {
     const text = `Se ha recibido una nueva inscripción.\n\nNombre: ${name}\nTeléfono: ${phone}\nFecha: ${timestamp}`;
 
     const html = `
-      <div style="font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Arial; line-height:1.5; color:#0f172a;">
-        <h2 style="margin:0 0 12px; font-size:18px;">Nueva inscripción: Taller Educación Financiera</h2>
-        <table style="width:100%; max-width:520px; border-collapse:collapse;">
+      <div style=\"font-family: ui-sans-serif, -apple-system, Segoe UI, Roboto, Arial; line-height:1.5; color:#0f172a;\">
+        <h2 style=\"margin:0 0 12px; font-size:18px;\">Nueva inscripción: Taller Educación Financiera</h2>
+        <table style=\"width:100%; max-width:520px; border-collapse:collapse;\">
           <tbody>
             <tr>
-              <td style="padding:8px 0; font-weight:600; width:140px;">Nombre</td>
-              <td style="padding:8px 0;">${escapeHtml(name)}</td>
+              <td style=\"padding:8px 0; font-weight:600; width:140px;\">Nombre</td>
+              <td style=\"padding:8px 0;\">${escapeHtml(name)}</td>
             </tr>
             <tr>
-              <td style="padding:8px 0; font-weight:600;">Teléfono</td>
-              <td style="padding:8px 0;">${escapeHtml(phone)}</td>
+              <td style=\"padding:8px 0; font-weight:600;\">Teléfono</td>
+              <td style=\"padding:8px 0;\">${escapeHtml(phone)}</td>
             </tr>
             <tr>
-              <td style="padding:8px 0; font-weight:600;">Fecha</td>
-              <td style="padding:8px 0;">${escapeHtml(timestamp)}</td>
+              <td style=\"padding:8px 0; font-weight:600;\">Fecha</td>
+              <td style=\"padding:8px 0;\">${escapeHtml(timestamp)}</td>
             </tr>
           </tbody>
         </table>
       </div>`;
 
-    if (!process.env.RESEND_API_KEY) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
       return NextResponse.json({ error: "Falta RESEND_API_KEY en el entorno" }, { status: 500 });
     }
 
+    const resend = new Resend(apiKey);
     const { error: resendError } = await resend.emails.send({
       from,
       to,
@@ -82,6 +82,6 @@ function escapeHtml(input: string): string {
     .replace(/&/g, "&amp;")
     .replace(/</g, "&lt;")
     .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
+    .replace(/\"/g, "&quot;")
     .replace(/'/g, "&#039;");
 } 
