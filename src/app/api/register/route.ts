@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { Resend } from "resend";
-import nodemailer from "nodemailer";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
@@ -16,7 +15,7 @@ function getRecipients(): string[] {
 
 export async function POST(request: Request) {
   try {
-    const { name, phone } = await request.json();
+    const { name, phone } = (await request.json()) as { name?: string; phone?: string };
 
     if (!name || !phone) {
       return NextResponse.json({ error: "Nombre y teléfono son obligatorios" }, { status: 400 });
@@ -52,37 +51,11 @@ export async function POST(request: Request) {
         </table>
       </div>`;
 
-    const hasSmtp = Boolean(process.env.SMTP_HOST && process.env.SMTP_USER && process.env.SMTP_PASS);
-
-    if (hasSmtp) {
-      const transporter = nodemailer.createTransport({
-        host: process.env.SMTP_HOST,
-        port: Number(process.env.SMTP_PORT || 587),
-        secure: process.env.SMTP_SECURE === "true" || Number(process.env.SMTP_PORT) === 465,
-        auth: {
-          user: process.env.SMTP_USER,
-          pass: process.env.SMTP_PASS,
-        },
-      });
-
-      await transporter.sendMail({
-        from,
-        to: to.join(","),
-        subject,
-        text,
-        html,
-        replyTo,
-      });
-
-      return NextResponse.json({ ok: true });
-    }
-
-    // Fallback to Resend if SMTP is not configured
     if (!process.env.RESEND_API_KEY) {
-      return NextResponse.json({ error: "Falta configuración de envío (SMTP o RESEND_API_KEY)" }, { status: 500 });
+      return NextResponse.json({ error: "Falta RESEND_API_KEY en el entorno" }, { status: 500 });
     }
 
-    const sendResult = await resend.emails.send({
+    const { error: resendError } = await resend.emails.send({
       from,
       to,
       subject,
@@ -91,15 +64,16 @@ export async function POST(request: Request) {
       reply_to: replyTo,
     });
 
-    if ((sendResult as any)?.error) {
-      console.error("Resend error:", (sendResult as any).error);
+    if (resendError) {
+      console.error("Resend error:", resendError);
       return NextResponse.json({ error: "No se pudo enviar el correo" }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true });
-  } catch (error) {
-    console.error(error);
-    return NextResponse.json({ error: "Error procesando la solicitud" }, { status: 500 });
+  } catch (error: unknown) {
+    const message = error instanceof Error ? error.message : "Error procesando la solicitud";
+    console.error(message);
+    return NextResponse.json({ error: message }, { status: 500 });
   }
 }
 

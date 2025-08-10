@@ -29,7 +29,7 @@ export default function Home() {
         body: JSON.stringify({ name: name.trim(), phone: phone.trim() }),
       });
 
-      const data = await res.json();
+      const data: { error?: string } = await res.json();
       if (!res.ok) {
         throw new Error(data?.error ?? "Error al enviar. Inténtalo de nuevo.");
       }
@@ -37,8 +37,9 @@ export default function Home() {
       setIsSuccess(true);
       setName("");
       setPhone("");
-    } catch (error: any) {
-      setMessage(error?.message ?? "Algo salió mal. Inténtalo de nuevo.");
+    } catch (error: unknown) {
+      const msg = error instanceof Error ? error.message : "Algo salió mal. Inténtalo de nuevo.";
+      setMessage(msg);
       setIsSuccess(false);
     } finally {
       setIsLoading(false);
