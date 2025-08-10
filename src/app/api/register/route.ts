@@ -61,7 +61,7 @@ export async function POST(request: Request) {
       subject,
       text,
       html,
-      reply_to: replyTo,
+      replyTo,
     });
 
     if (resendError) {
