@@ -70,8 +70,13 @@ export async function POST(request: Request) {
     const { error: resendError } = await resend.emails.send(sendOptions);
 
     if (resendError) {
-      console.error("Resend error:", resendError);
-      return NextResponse.json({ error: "No se pudo enviar el correo" }, { status: 500 });
+      const details = typeof resendError === "object" ? JSON.stringify(resendError) : String(resendError);
+      console.error("Resend error:", details);
+      const payload = { error: "No se pudo enviar el correo" } as { error: string; details?: string };
+      if (process.env.NODE_ENV !== "production") {
+        payload.details = details;
+      }
+      return NextResponse.json(payload, { status: 500 });
     }
 
     return NextResponse.json({ ok: true });
